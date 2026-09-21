@@ -38,17 +38,13 @@ jobs:
           echo "GKD_KEY_PASSWORD=$GKD_KEY_PASSWORD" >> gradle.properties
 
       - run: chmod 777 ./gradlew
-      - run: ./gradlew app:assembleGkdRelease app:bundlePlayRelease
+      # 只出 APK：bundlePlayRelease 要多跑一遍 R8，发版时间翻倍，而 AAB 仅上架 Google Play 才用得到
+      - run: ./gradlew app:assembleGkdRelease
 
       - uses: actions/upload-artifact@v7
         with:
           name: release
           path: app/build/outputs/apk/gkd/release
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: playRelease
-          path: app/build/outputs/bundle/playRelease
 
       - uses: actions/upload-artifact@v7
         with:
