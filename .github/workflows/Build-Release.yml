@@ -21,20 +21,21 @@ jobs:
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
 
       - name: write gkd secrets info
+        env:
+          GKD_STORE_FILE_BASE64: ${{ secrets.GKD_STORE_FILE_BASE64 }}
+          GKD_STORE_PASSWORD: ${{ secrets.GKD_STORE_PASSWORD }}
+          GKD_KEY_ALIAS: ${{ secrets.GKD_KEY_ALIAS }}
+          GKD_KEY_PASSWORD: ${{ secrets.GKD_KEY_PASSWORD }}
         run: |
-          echo ${{ secrets.GKD_STORE_FILE_BASE64 }} | base64 --decode > ${{ github.workspace }}/gkd.jks
-          echo GKD_STORE_FILE='${{ github.workspace }}/gkd.jks' >> gradle.properties
-          echo GKD_STORE_PASSWORD='${{ secrets.GKD_STORE_PASSWORD }}' >> gradle.properties
-          echo GKD_KEY_ALIAS='${{ secrets.GKD_KEY_ALIAS }}' >> gradle.properties
-          echo GKD_KEY_PASSWORD='${{ secrets.GKD_KEY_PASSWORD }}' >> gradle.properties
-
-      - name: write play secrets info
-        run: |
-          echo ${{ secrets.PLAY_STORE_FILE_BASE64 }} | base64 --decode > ${{ github.workspace }}/play.jks
-          echo PLAY_STORE_FILE='${{ github.workspace }}/play.jks' >> gradle.properties
-          echo PLAY_STORE_PASSWORD='${{ secrets.PLAY_STORE_PASSWORD }}' >> gradle.properties
-          echo PLAY_KEY_ALIAS='${{ secrets.PLAY_KEY_ALIAS }}' >> gradle.properties
-          echo PLAY_KEY_PASSWORD='${{ secrets.PLAY_KEY_PASSWORD }}' >> gradle.properties
+          if [ -z "$GKD_STORE_FILE_BASE64" ]; then
+            echo "::error::仓库未配置 GKD_STORE_FILE_BASE64 等签名 Secrets。Release 必须用固定 keystore 签名，否则每次 runner 的 debug 签名互不兼容、版本之间无法覆盖安装。"
+            exit 1
+          fi
+          echo "$GKD_STORE_FILE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/gkd.jks"
+          echo "GKD_STORE_FILE=$GITHUB_WORKSPACE/gkd.jks" >> gradle.properties
+          echo "GKD_STORE_PASSWORD=$GKD_STORE_PASSWORD" >> gradle.properties
+          echo "GKD_KEY_ALIAS=$GKD_KEY_ALIAS" >> gradle.properties
+          echo "GKD_KEY_PASSWORD=$GKD_KEY_PASSWORD" >> gradle.properties
 
       - run: chmod 777 ./gradlew
       - run: ./gradlew app:assembleGkdRelease app:bundlePlayRelease

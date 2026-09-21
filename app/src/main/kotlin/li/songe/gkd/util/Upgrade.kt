@@ -45,8 +45,8 @@ private val UPDATE_URL: String
 
 /** 主源失败时在 jsDelivr 与 GitHub raw 之间互为回退 */
 private fun updateCheckUrls(primary: String): List<String> {
-    val jsdelivr = "https://cdn.jsdelivr.net/gh/hanchuan8/gkd-miuix@main/"
-    val raw = "https://raw.githubusercontent.com/hanchuan8/gkd-miuix/main/"
+    val jsdelivr = "https://cdn.jsdelivr.net/gh/84593320z/gkd-@miuix-ai/"
+    val raw = "https://raw.githubusercontent.com/84593320z/gkd-/miuix-ai/"
     val alternate = when {
         primary.startsWith(jsdelivr) -> raw + primary.removePrefix(jsdelivr)
         primary.startsWith(raw) -> jsdelivr + primary.removePrefix(raw)

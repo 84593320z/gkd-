@@ -2,7 +2,7 @@
   "versionCode": 99,
   "versionName": "1.2.5",
   "changelog": "v1.2.5（测试通道）\n\n- 修复开机后需手动打开「服务状态」：系统杀掉无障碍时不再误清开启意图，自动修复会补写无障碍总开关\n- 修复无障碍进入 Crashed 后开关显示开启但跳广告失效、且关不掉：关闭时从安全设置移除，开启/修复时先摘再挂",
-  "downloadUrl": "https://github.com/hanchuan8/gkd-miuix/releases/download/v1.2.5/gkd-x-v1.2.5.apk",
+  "downloadUrl": "https://github.com/84593320z/gkd-/releases/download/v1.2.5/gkd-x-v1.2.5.apk",
   "fileSize": 3473867,
   "versionLogs": [
     {

@@ -49,9 +49,9 @@
 
 ## 开源致谢
 
-本分支基于 [GKD](https://github.com/gkd-kit/gkd)，界面依托 [compose-miuix-ui](https://github.com/compose-miuix-ui/miuix)（MIUIX UI / Preference / Icons / Blur）等开源项目，详见仓库 README。
+本分支基于 [GKD](https://github.com/gkd-kit/gkd) 与 [hanchuan8/gkd-miuix](https://github.com/hanchuan8/gkd-miuix)，界面依托 [compose-miuix-ui](https://github.com/compose-miuix-ui/miuix)（MIUIX UI / Preference / Icons / Blur）等开源项目，详见仓库 README。
 
 ## 更新方式
 
 - GKD-X - 设置 - 关于 - 检测更新
-- 或前往 [GitHub Releases](https://github.com/hanchuan8/gkd-miuix/releases) 下载
+- 或前往 [GitHub Releases](https://github.com/84593320z/gkd-/releases) 下载

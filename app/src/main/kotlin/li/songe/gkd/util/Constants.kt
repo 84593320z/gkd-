@@ -6,7 +6,7 @@ const val IMPORT_SHORT_URL = "https://i.gkd.li/i/"
 const val SERVER_SCRIPT_URL =
     "https://registry.npmmirror.com/@gkd-kit/config/latest/files/dist/server.js"
 
-const val REPOSITORY_URL = "https://github.com/hanchuan8/gkd-miuix"
+const val REPOSITORY_URL = "https://github.com/84593320z/gkd-"
 const val ISSUES_URL = "${REPOSITORY_URL}/issues"
 
 /** 规则与选择器文档仍使用上游站点 */

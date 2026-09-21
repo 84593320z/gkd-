@@ -1,4 +1,4 @@
-# GKD-X (gkd-miuix)
+# GKD-X 融合版
 
 基于 [GKD](https://github.com/gkd-kit/gkd) 的 Android 自定义屏幕点击应用分支，界面全面适配 [compose-miuix-ui](https://github.com/compose-miuix-ui/miuix)。
 
@@ -26,15 +26,16 @@
 
 | 项目 | 说明 |
 | ---- | ---- |
+| 本仓库 | [84593320z/gkd-](https://github.com/84593320z/gkd-) |
+| 直接来源 | [hanchuan8/gkd-miuix](https://github.com/hanchuan8/gkd-miuix)（本融合版在其基础上开发） |
 | 上游 | [gkd-kit/gkd](https://github.com/gkd-kit/gkd) |
-| 本仓库 | [hanchuan8/gkd-miuix](https://github.com/hanchuan8/gkd-miuix) |
 | AI 生成规则 | 移植自 [fjjzy/gkd-plus](https://github.com/fjjzy/gkd-plus)（GPL-3.0） |
 | 文档 / 选择器说明 | 仍可参考 <https://gkd.li> |
 | 订阅规则 | 兼容 GKD 订阅格式，可使用社区订阅 |
 
 ## 安装
 
-从本仓库 [Releases](https://github.com/hanchuan8/gkd-miuix/releases) 下载安装包。
+从本仓库 [Releases](https://github.com/84593320z/gkd-/releases) 下载安装包。
 
 也可自行编译：
 
@@ -53,12 +54,13 @@
 
 ## 开源致谢
 
-本项目在 [GKD](https://github.com/gkd-kit/gkd)（GPL-3.0）基础上开发，并使用了下列开源项目（不完全列表）：
+本项目在 [GKD](https://github.com/gkd-kit/gkd)（GPL-3.0）与 [hanchuan8/gkd-miuix](https://github.com/hanchuan8/gkd-miuix)（GPL-3.0）基础上开发，并使用了下列开源项目（不完全列表）：
 
 | 项目 | 说明 | 链接 |
 | ---- | ---- | ---- |
 | **compose-miuix-ui** | MIUIX 风格 Compose 组件 / Preference / Icons / Blur | [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix) |
 | **GKD** | 核心自动化、选择器与订阅能力 | [gkd-kit/gkd](https://github.com/gkd-kit/gkd) |
+| **gkd-miuix** | 本融合版的直接来源 | [hanchuan8/gkd-miuix](https://github.com/hanchuan8/gkd-miuix) |
 | **gkd-plus** | AI 生成规则与 AI 配置入口 | [fjjzy/gkd-plus](https://github.com/fjjzy/gkd-plus) |
 | Jetpack Compose | UI 框架 | [androidx/compose](https://developer.android.com/jetpack/compose) |
 | AndroidX / Room | 应用基础组件与本地数据库 | [AndroidX](https://developer.android.com/jetpack) |
@@ -82,4 +84,4 @@
 
 问题与建议请提交到本仓库 Issues：
 
-<https://github.com/hanchuan8/gkd-miuix/issues>
+<https://github.com/84593320z/gkd-/issues>

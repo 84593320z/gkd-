@@ -103,13 +103,13 @@ sealed class UpdateChannelOption(
     data object Stable : UpdateChannelOption(
         0,
         "稳定版",
-        "https://raw.githubusercontent.com/hanchuan8/gkd-miuix/main/version/stable.json"
+        "https://raw.githubusercontent.com/84593320z/gkd-/miuix-ai/version/stable.json"
     )
 
     data object Beta : UpdateChannelOption(
         1,
         "测试版",
-        "https://raw.githubusercontent.com/hanchuan8/gkd-miuix/main/version/beta.json"
+        "https://raw.githubusercontent.com/84593320z/gkd-/miuix-ai/version/beta.json"
     )
 
     companion object {
