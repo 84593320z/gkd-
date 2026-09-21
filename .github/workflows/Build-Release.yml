@@ -61,6 +61,11 @@ jobs:
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
+      # 回填 version/*.json 需要仓库工作树；取默认分支而不是标签提交，因为 App 读的是分支 HEAD
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch || 'miuix-ai' }}
+
       - uses: actions/download-artifact@v8
         with:
           name: outputs
@@ -95,6 +100,42 @@ jobs:
           asset_path: release/app-gkd-release.apk
           asset_name: gkd-x-${{ github.ref_name }}.apk
           asset_content_type: application/vnd.android.package-archive
+
+      # gradle 构建不是字节可复现的，fileSize 只能取这个附件自己的真实字节数；
+      # 只改数字，不动 JSON 其余排版。downloadUrl 不指向本次 tag 的文件一律跳过，避免大小和地址不匹配。
+      - name: backfill real fileSize
+        continue-on-error: true
+        env:
+          TAG: ${{ github.ref_name }}
+          TARGET_BRANCH: ${{ github.event.repository.default_branch || 'miuix-ai' }}
+        run: |
+          set -u
+          SIZE=$(wc -c < release/app-gkd-release.apk | tr -d ' ')
+          echo "本次附件真实大小: $SIZE 字节"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          changed=0
+          for f in version/stable.json version/beta.json; do
+            [ -f "$f" ] || continue
+            if ! grep -q "releases/download/$TAG/" "$f"; then
+              echo "::warning::$f 的 downloadUrl 不指向 $TAG，跳过回填；发版时记得同步更新 version/*.json"
+              continue
+            fi
+            sed -i -E "s#(\"fileSize\"[[:space:]]*:[[:space:]]*)[0-9]+#\1$SIZE#" "$f"
+            if git diff --quiet -- "$f"; then
+              echo "$f 已是 $SIZE，无需提交"
+              continue
+            fi
+            git add "$f"
+            changed=1
+          done
+          if [ "$changed" = 1 ]; then
+            git commit -m "chore(version): 回填 $TAG 附件真实 fileSize=$SIZE [skip ci]"
+            git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+            echo "已推送到 $TARGET_BRANCH"
+          else
+            echo "没有需要回填的文件"
+          fi
 
       - run: zip -r outputs.zip outputs
       - uses: actions/upload-release-asset@v1
