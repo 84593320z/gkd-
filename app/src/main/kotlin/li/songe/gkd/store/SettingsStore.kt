@@ -7,6 +7,7 @@ import li.songe.gkd.util.ActionTipStyleOption
 import li.songe.gkd.util.AppGroupOption
 import li.songe.gkd.util.AppSortOption
 import li.songe.gkd.util.AutomatorModeOption
+import li.songe.gkd.util.findOption
 import li.songe.gkd.util.RuleSortOption
 import li.songe.gkd.util.UpdateChannelOption
 import li.songe.gkd.util.UpdateTimeOption
