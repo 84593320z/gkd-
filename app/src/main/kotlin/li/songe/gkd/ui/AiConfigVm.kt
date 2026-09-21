@@ -1,6 +1,7 @@
 package li.songe.gkd.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import li.songe.gkd.store.AiConfig
@@ -54,6 +55,9 @@ data class AiConfigDraft(
 
 /** 二级页与三级页共用同一份草稿：进入二级页时载入，保存或返回时结束编辑。 */
 class AiConfigVm : ViewModel() {
+    /** 跟随 ViewModel（Activity 级）存活：中途进三级页也不会让在途请求被取消、标志卡死。 */
+    val scope = viewModelScope
+
     val draftFlow = MutableStateFlow(AiConfigDraft())
     val editingFlow = MutableStateFlow(false)
     val modelListFlow = MutableStateFlow<List<String>>(emptyList())
@@ -66,11 +70,14 @@ class AiConfigVm : ViewModel() {
     fun load(saved: AiConfig) {
         if (editingFlow.value) return
         draftFlow.value = AiConfigDraft.of(saved)
+        testResultFlow.value = null
         editingFlow.value = true
     }
 
+    /** 任何一次编辑都让上一次的测试结果失效，避免旧结论误导。 */
     fun update(transform: (AiConfigDraft) -> AiConfigDraft) {
         draftFlow.update(transform)
+        testResultFlow.value = null
     }
 
     fun resetParams() = update {

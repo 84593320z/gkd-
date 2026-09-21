@@ -9,6 +9,7 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -147,6 +148,7 @@ object AiRuleGenerator {
         }
     }
 
+    /** 只做一次 max_tokens=1 的最小对话，返回错误摘要；无错误时返回 "ok"。 */
     suspend fun testConnection(config: AiConfig): Result<String> = runCatching {
         val httpClient = createHttpClient()
         try {
@@ -162,10 +164,24 @@ object AiRuleGenerator {
                 contentType(ContentType.Application.Json)
                 setBody(buildRequestBody(config, "hi", maxTokensOverride = 1))
             }
-            response.bodyAsText()
+            val body = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw Exception("HTTP ${response.status.value} ${errorHint(body)}".trim())
+            }
+            errorHint(body).takeIf { it.isNotEmpty() }?.let { throw Exception(it) }
+            "ok"
         } finally {
             httpClient.close()
         }
+    }
+
+    private fun errorHint(body: String): String {
+        val error = runCatching { json.parseToJsonElement(body).jsonObject["error"] }.getOrNull()
+            ?: return ""
+        val message = runCatching { error.jsonObject["message"]?.jsonPrimitive?.content }.getOrNull()
+            ?: runCatching { error.jsonPrimitive.content }.getOrNull()
+            ?: return ""
+        return message.trim().take(200)
     }
 
     suspend fun fetchModelList(config: AiConfig): Result<List<String>> = runCatching {

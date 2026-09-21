@@ -88,8 +88,6 @@ import li.songe.gkd.ui.AiHelpPage
 import li.songe.gkd.ui.AiHelpPageRoute
 import li.songe.gkd.ui.AiParamsPage
 import li.songe.gkd.ui.AiParamsPageRoute
-import li.songe.gkd.ui.AiTestPage
-import li.songe.gkd.ui.AiTestPageRoute
 import li.songe.gkd.ui.AppOpsAllowPage
 import li.songe.gkd.ui.AppOpsAllowRoute
 import li.songe.gkd.ui.AuthA11yPage
@@ -284,7 +282,6 @@ class MainActivity : ComponentActivity() {
                             entry<AdvancedPageRoute> { AdvancedPage() }
                             entry<AiConfigPageRoute> { AiConfigPage() }
                             entry<AiParamsPageRoute> { AiParamsPage() }
-                            entry<AiTestPageRoute> { AiTestPage() }
                             entry<AiHelpPageRoute> { AiHelpPage() }
                             entry<SnapshotPageRoute> { SnapshotPage() }
                             entry<AppOpsAllowRoute> { AppOpsAllowPage() }

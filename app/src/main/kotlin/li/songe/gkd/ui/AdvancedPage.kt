@@ -447,6 +447,34 @@ fun AdvancedPage() {
             }
 
             PreferenceGroup(title = "快照") {
+                TextSwitch(
+                    title = "AI 规则",
+                    subtitle = "保存快照后自动生成规则",
+                    checked = store.aiEnable,
+                    suffixIcon = {
+                        PerfCustomIconButton(
+                            size = 32.dp,
+                            iconSize = 20.dp,
+                            onClickLabel = "打开 AI 规则配置页",
+                            onClick = throttle {
+                                aiVm.finishEditing()
+                                mainVm.navigatePage(AiConfigPageRoute)
+                            },
+                            imageVector = PerfIcon.Settings,
+                            contentDescription = "AI 规则设置",
+                        )
+                    },
+                    onCheckedChange = {
+                        if (it && (store.aiConfig.apiUrl.isBlank() || store.aiConfig.apiKey.isBlank())) {
+                            toast("请先配置 AI 设置")
+                            aiVm.finishEditing()
+                            mainVm.navigatePage(AiConfigPageRoute)
+                            return@TextSwitch
+                        }
+                        storeFlow.value = store.copy(aiEnable = it)
+                    }
+                )
+
                 SettingItem(
                     title = "快照记录",
                     subtitle = "应用界面节点信息及截图",
@@ -550,34 +578,6 @@ fun AdvancedPage() {
                         storeFlow.value = store.copy(
                             showSaveSnapshotToast = it
                         )
-                    }
-                )
-
-                TextSwitch(
-                    title = "AI 规则",
-                    subtitle = "保存快照后自动生成规则",
-                    checked = store.aiEnable,
-                    suffixIcon = {
-                        PerfCustomIconButton(
-                            size = 32.dp,
-                            iconSize = 20.dp,
-                            onClickLabel = "打开 AI 规则配置页",
-                            onClick = throttle {
-                                aiVm.finishEditing()
-                                mainVm.navigatePage(AiConfigPageRoute)
-                            },
-                            imageVector = PerfIcon.Settings,
-                            contentDescription = "AI 规则设置",
-                        )
-                    },
-                    onCheckedChange = {
-                        if (it && (store.aiConfig.apiUrl.isBlank() || store.aiConfig.apiKey.isBlank())) {
-                            toast("请先配置 AI 设置")
-                            aiVm.finishEditing()
-                            mainVm.navigatePage(AiConfigPageRoute)
-                            return@TextSwitch
-                        }
-                        storeFlow.value = store.copy(aiEnable = it)
                     }
                 )
 

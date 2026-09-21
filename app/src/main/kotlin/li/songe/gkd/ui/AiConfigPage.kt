@@ -15,9 +15,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
@@ -41,6 +41,7 @@ import li.songe.gkd.util.launchTry
 import li.songe.gkd.util.throttle
 import li.songe.gkd.util.toast
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextButton
@@ -52,7 +53,6 @@ data object AiConfigPageRoute : NavKey
 @Composable
 fun AiConfigPage() {
     val mainVm = LocalMainViewModel.current
-    val scope = rememberCoroutineScope()
     val store by storeFlow.collectAsState()
     val vm = viewModel<AiConfigVm>()
     LaunchedEffect(Unit) { vm.load(store.aiConfig) }
@@ -62,6 +62,8 @@ fun AiConfigPage() {
     var fetchingModel by vm.fetchingModelFlow.asMutableState()
     var showModelDlg by vm.showModelDlgFlow.asMutableState()
     var showProtocolDlg by vm.showProtocolDlgFlow.asMutableState()
+    var testing by vm.testingFlow.asMutableState()
+    var testResult by vm.testResultFlow.asMutableState()
 
     val protocolOption = AiProtocolOption.objects.findOption(draft.protocol)
 
@@ -180,7 +182,7 @@ fun AiConfigPage() {
                                     return@throttle
                                 }
                                 fetchingModel = true
-                                scope.launchTry {
+                                vm.scope.launchTry {
                                     AiRuleGenerator.fetchModelList(config)
                                         .onSuccess { list ->
                                             modelList = list
@@ -208,19 +210,56 @@ fun AiConfigPage() {
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        text = if (testing) "测试中…" else "测试连接",
+                        enabled = !testing,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                        onClick = throttle {
+                            val config = draft.toConfig(store.aiConfig)
+                            if (config == null) {
+                                toast("请先修正生成参数")
+                                return@throttle
+                            }
+                            if (config.apiUrl.isBlank() || config.apiKey.isBlank() || config.model.isBlank()) {
+                                toast("请先填写 API 地址、Key 与模型")
+                                return@throttle
+                            }
+                            testing = true
+                            testResult = null
+                            vm.scope.launchTry {
+                                AiRuleGenerator.testConnection(config)
+                                    .onSuccess { testResult = "连接成功" }
+                                    .onFailure { e -> testResult = "连接失败：${e.message}" }
+                                testing = false
+                            }
+                        },
+                    )
+                    val result = testResult
+                    if (result != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = result,
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = if (result.startsWith("连接成功")) {
+                                MiuixTheme.colorScheme.primary
+                            } else {
+                                MiuixTheme.colorScheme.error
+                            },
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
 
-            PreferenceGroup(title = "生成与连接") {
+            PreferenceGroup(title = "更多") {
                 SettingItem(
                     title = "生成参数",
                     subtitle = draft.paramSummary,
                     onClick = { mainVm.navigatePage(AiParamsPageRoute) },
-                )
-                SettingItem(
-                    title = "连接测试",
-                    subtitle = "校验 API 地址、Key 与模型是否可用",
-                    onClick = { mainVm.navigatePage(AiTestPageRoute) },
                 )
                 SettingItem(
                     title = "使用说明",
