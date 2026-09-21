@@ -1,0 +1,573 @@
+package li.songe.gkd
+
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import li.songe.gkd.ui.component.PerfAlertDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsAnimationCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
+import com.dylanc.activityresult.launcher.PickContentLauncher
+import com.dylanc.activityresult.launcher.StartActivityLauncher
+import com.dylanc.activityresult.launcher.launchForResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import li.songe.gkd.a11y.topActivityFlow
+import li.songe.gkd.a11y.updateSystemDefaultAppId
+import li.songe.gkd.a11y.updateTopActivity
+import li.songe.gkd.permission.AuthDialog
+import li.songe.gkd.permission.updatePermissionState
+import li.songe.gkd.service.A11yService
+import li.songe.gkd.service.StatusService
+import li.songe.gkd.service.fixRestartAutomatorService
+import li.songe.gkd.service.updateTopTaskAppId
+import li.songe.gkd.shizuku.automationRegisteredExceptionFlow
+import li.songe.gkd.shizuku.shizukuContextFlow
+import li.songe.gkd.store.storeFlow
+import li.songe.gkd.util.applyPredictiveBackEnabled
+import li.songe.gkd.ui.A11YScopeAppListRoute
+import li.songe.gkd.ui.A11yEventLogPage
+import li.songe.gkd.ui.A11yEventLogRoute
+import li.songe.gkd.ui.A11yScopeAppListPage
+import li.songe.gkd.ui.AboutPage
+import li.songe.gkd.ui.AboutRoute
+import li.songe.gkd.ui.ActivityLogPage
+import li.songe.gkd.ui.ActivityLogRoute
+import li.songe.gkd.ui.AdvancedPage
+import li.songe.gkd.ui.AdvancedPageRoute
+import li.songe.gkd.ui.AiConfigPage
+import li.songe.gkd.ui.AiConfigPageRoute
+import li.songe.gkd.ui.AiHelpPage
+import li.songe.gkd.ui.AiHelpPageRoute
+import li.songe.gkd.ui.AiParamsPage
+import li.songe.gkd.ui.AiParamsPageRoute
+import li.songe.gkd.ui.AiTestPage
+import li.songe.gkd.ui.AiTestPageRoute
+import li.songe.gkd.ui.AppOpsAllowPage
+import li.songe.gkd.ui.AppOpsAllowRoute
+import li.songe.gkd.ui.AuthA11yPage
+import li.songe.gkd.ui.AuthA11yRoute
+import li.songe.gkd.ui.BlockA11yAppListPage
+import li.songe.gkd.ui.BlockA11yAppListRoute
+import li.songe.gkd.ui.CrashReportPage
+import li.songe.gkd.ui.CrashReportRoute
+import li.songe.gkd.ui.DesignPage
+import li.songe.gkd.ui.DesignRoute
+import li.songe.gkd.ui.EditBlockAppListPage
+import li.songe.gkd.ui.EditBlockAppListRoute
+import li.songe.gkd.ui.ImagePreviewPage
+import li.songe.gkd.ui.ImagePreviewRoute
+import li.songe.gkd.ui.SlowGroupPage
+import li.songe.gkd.ui.SlowGroupRoute
+import li.songe.gkd.ui.SnapshotPage
+import li.songe.gkd.ui.SnapshotPageRoute
+import li.songe.gkd.ui.SubsAppGroupListPage
+import li.songe.gkd.ui.SubsAppGroupListRoute
+import li.songe.gkd.ui.SubsAppListPage
+import li.songe.gkd.ui.SubsAppListRoute
+import li.songe.gkd.ui.SubsCategoryGroupPage
+import li.songe.gkd.ui.SubsCategoryGroupRoute
+import li.songe.gkd.ui.SubsCategoryPage
+import li.songe.gkd.ui.SubsCategoryRoute
+import li.songe.gkd.ui.SubsGlobalGroupExcludePage
+import li.songe.gkd.ui.SubsGlobalGroupExcludeRoute
+import li.songe.gkd.ui.SubsGlobalGroupListPage
+import li.songe.gkd.ui.SubsGlobalGroupListRoute
+import li.songe.gkd.ui.UpsertRuleGroupPage
+import li.songe.gkd.ui.UpsertRuleGroupRoute
+import li.songe.gkd.ui.WebViewPage
+import li.songe.gkd.ui.WebViewRoute
+import li.songe.gkd.ui.component.BuildDialog
+import li.songe.gkd.ui.component.PerfIcon
+import li.songe.gkd.ui.component.ShareLogDlg
+import li.songe.gkd.ui.component.SubsSheet
+import li.songe.gkd.ui.component.SubsUpdateProgressDialog
+import li.songe.gkd.ui.component.TermsAcceptDialog
+import li.songe.gkd.ui.component.TextDialog
+import li.songe.gkd.ui.home.HomePage
+import li.songe.gkd.ui.home.HomeRoute
+import li.songe.gkd.ui.share.LocalMainViewModel
+import li.songe.gkd.ui.style.AppTheme
+import li.songe.gkd.util.AndroidTarget
+import li.songe.gkd.util.EditGithubCookieDlg
+import li.songe.gkd.util.KeyboardUtils
+import li.songe.gkd.util.LogUtils
+import li.songe.gkd.util.ShortUrlSet
+import li.songe.gkd.util.appInfoMapFlow
+import li.songe.gkd.util.componentName
+import li.songe.gkd.util.copyText
+import li.songe.gkd.util.fixSomeProblems
+import li.songe.gkd.util.launchTry
+import li.songe.gkd.util.mapState
+import li.songe.gkd.util.openApp
+import li.songe.gkd.util.openUri
+import li.songe.gkd.util.shizukuAppId
+import li.songe.gkd.util.throttle
+import li.songe.gkd.util.toast
+import kotlin.concurrent.Volatile
+import kotlin.reflect.jvm.jvmName
+
+class MainActivity : ComponentActivity() {
+
+    companion object {
+        private var instanceRef: java.lang.ref.WeakReference<MainActivity>? = null
+        val current: MainActivity? get() = instanceRef?.get()
+    }
+    val startTime = System.currentTimeMillis()
+    val mainVm by viewModels<MainViewModel>()
+    val launcher by lazy { StartActivityLauncher(this) }
+    val pickContentLauncher by lazy { PickContentLauncher(this) }
+
+    val imeFullHiddenFlow = MutableStateFlow(true)
+    val imePlayingFlow = MutableStateFlow(false)
+
+    private val imeVisible: Boolean
+        get() = ViewCompat.getRootWindowInsets(window.decorView)
+            ?.isVisible(WindowInsetsCompat.Type.ime()) == true  // fix #1315
+
+    private fun watchKeyboardVisible() {
+        if (AndroidTarget.R) {
+            ViewCompat.setWindowInsetsAnimationCallback(
+                window.decorView,
+                object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    override fun onStart(
+                        animation: WindowInsetsAnimationCompat,
+                        bounds: WindowInsetsAnimationCompat.BoundsCompat
+                    ): WindowInsetsAnimationCompat.BoundsCompat {
+                        imePlayingFlow.update { imeVisible }
+                        return super.onStart(animation, bounds)
+                    }
+
+                    override fun onProgress(
+                        insets: WindowInsetsCompat,
+                        runningAnimations: List<WindowInsetsAnimationCompat>
+                    ): WindowInsetsCompat {
+                        return insets
+                    }
+
+                    override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                        imeFullHiddenFlow.update { !imeVisible }
+                        imePlayingFlow.update { false }
+                        super.onEnd(animation)
+                    }
+                })
+        } else {
+            KeyboardUtils.registerSoftInputChangedListener(window) { height ->
+                // onEnd
+                imeFullHiddenFlow.update { height == 0 }
+            }
+        }
+    }
+
+    suspend fun hideSoftInput(): Boolean {
+        if (!imeFullHiddenFlow.updateAndGet { !imeVisible }) {
+            KeyboardUtils.hideSoftInput(this@MainActivity)
+            imeFullHiddenFlow.drop(1).first()
+            return true
+        }
+        return false
+    }
+
+    fun justHideSoftInput(): Boolean {
+        if (!imeFullHiddenFlow.updateAndGet { !imeVisible }) {
+            KeyboardUtils.hideSoftInput(this@MainActivity)
+            return true
+        }
+        return false
+    }
+
+    suspend fun pickFile(contentType: String): Uri? {
+        val u = launcher.launchForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = contentType
+        }).data?.data
+        if (u == null) {
+            toast("未选择文件")
+        }
+        return u
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+        enableEdgeToEdge()
+        fixSomeProblems()
+        // 必须在 super.onCreate 前写入 ApplicationInfo，系统才会按开关启用预测式返回
+        applyPredictiveBackEnabled(storeFlow.value.enablePredictiveBack)
+        super.onCreate(savedInstanceState)
+        instanceRef = java.lang.ref.WeakReference(this)
+        LogUtils.d()
+        mainVm
+        launcher
+        pickContentLauncher
+        lifecycleScope.launch {
+            storeFlow.mapState(lifecycleScope) { s -> s.excludeFromRecents }.collect {
+                app.activityManager.appTasks.forEach { task ->
+                    task.setExcludeFromRecents(it)
+                }
+            }
+        }
+        addOnNewIntentListener {
+            mainVm.handleIntent(it)
+            intent = null
+        }
+        watchKeyboardVisible()
+        StatusService.autoStart()
+        if (storeFlow.value.enableBlockA11yAppList) {
+            updateTopTaskAppId(META.appId)
+        }
+        setContent {
+            CompositionLocalProvider(
+                LocalMainViewModel provides mainVm
+            ) {
+                AppTheme {
+                    NavDisplay(
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(),
+                            rememberViewModelStoreNavEntryDecorator(),
+                        ),
+                        backStack = mainVm.backStack,
+                        onBack = mainVm::popPage,
+                        // 与 KernelSU 一致：miuix-navigation3 默认转场（圆角裁切 + 压暗）
+                        entryProvider = entryProvider {
+                            entry<HomeRoute> { HomePage() }
+                            entry<AuthA11yRoute> { AuthA11yPage() }
+                            entry<AboutRoute> { AboutPage() }
+                            entry<DesignRoute> { DesignPage() }
+                            entry<BlockA11yAppListRoute> { BlockA11yAppListPage() }
+                            entry<AdvancedPageRoute> { AdvancedPage() }
+                            entry<AiConfigPageRoute> { AiConfigPage() }
+                            entry<AiParamsPageRoute> { AiParamsPage() }
+                            entry<AiTestPageRoute> { AiTestPage() }
+                            entry<AiHelpPageRoute> { AiHelpPage() }
+                            entry<SnapshotPageRoute> { SnapshotPage() }
+                            entry<AppOpsAllowRoute> { AppOpsAllowPage() }
+                            entry<A11YScopeAppListRoute> { A11yScopeAppListPage() }
+                            entry<ActivityLogRoute> { ActivityLogPage() }
+                            entry<A11yEventLogRoute> { A11yEventLogPage() }
+                            entry<EditBlockAppListRoute> { EditBlockAppListPage() }
+                            entry<SlowGroupRoute> { SlowGroupPage() }
+                            entry<SubsAppListRoute> { SubsAppListPage(it) }
+                            entry<WebViewRoute> { WebViewPage(it) }
+                            entry<SubsCategoryRoute> { SubsCategoryPage(it) }
+                            entry<SubsGlobalGroupListRoute> { SubsGlobalGroupListPage(it) }
+                            entry<SubsGlobalGroupExcludeRoute> { SubsGlobalGroupExcludePage(it) }
+                            entry<ImagePreviewRoute> { ImagePreviewPage(it) }
+                            entry<UpsertRuleGroupRoute> { UpsertRuleGroupPage(it) }
+                            entry<SubsAppGroupListRoute> { SubsAppGroupListPage(it) }
+                            entry<CrashReportRoute> { CrashReportPage() }
+                            entry<SubsCategoryGroupRoute> { SubsCategoryGroupPage(it) }
+                        },
+                    )
+                    if (!mainVm.termsAcceptedFlow.collectAsState().value) {
+                        TermsAcceptDialog()
+                    } else {
+                        UiAutomationAlreadyRegisteredDlg()
+                        AccessRestrictedSettingsDlg()
+                        ShizukuErrorDialog(mainVm.shizukuErrorFlow)
+                        AuthDialog(mainVm.authReasonFlow)
+                        BuildDialog(mainVm.dialogFlow)
+                        mainVm.uploadOptions.ShowDialog()
+                        EditGithubCookieDlg()
+                        mainVm.updateStatus?.UpgradeDialog()
+                        SubsSheet(mainVm, mainVm.sheetSubsIdFlow)
+                        mainVm.inputSubsLinkOption.ContentDialog()
+                        SubsUpdateProgressDialog()
+                        mainVm.ruleGroupState.Render()
+                        TextDialog(mainVm.textFlow)
+                        ShareLogDlg(mainVm.showShareLogDlgFlow)
+                    }
+                }
+            }
+            LaunchedEffect(null) {
+                intent?.let {
+                    mainVm.handleIntent(it)
+                    intent = null
+                }
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        LogUtils.d()
+        activityVisibleState++
+        if (topActivityFlow.value.appId != META.appId) {
+            synchronized(topActivityFlow) {
+                updateTopActivity(
+                    META.appId,
+                    MainActivity::class.jvmName
+                )
+            }
+        }
+    }
+
+    var isFirstResume = true
+    override fun onResume() {
+        super.onResume()
+        LogUtils.d()
+        if (isFirstResume && startTime - app.startTime < 2000) {
+            isFirstResume = false
+        } else {
+            syncFixState()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        LogUtils.d()
+        activityVisibleState--
+    }
+
+    override fun onDestroy() {
+        if (instanceRef?.get() === this) {
+            instanceRef = null
+        }
+        super.onDestroy()
+        LogUtils.d()
+    }
+}
+
+@Volatile
+private var activityVisibleState = 0
+val isActivityVisible get() = activityVisibleState > 0
+
+val activityNavSourceName by lazy { META.appId + ".activity.nav.source" }
+
+fun Activity.navToMainActivity() {
+    if (intent != null) {
+        val navIntent = Intent(intent)
+        navIntent.component = MainActivity::class.componentName
+        navIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        navIntent.putExtra(activityNavSourceName, this::class.jvmName)
+        startActivity(navIntent)
+    }
+    finish()
+}
+
+private val syncStateMutex = Mutex()
+fun syncFixState() {
+    appScope.launchTry(Dispatchers.IO) {
+        if (syncStateMutex.isLocked) {
+            LogUtils.d("syncFixState isLocked")
+        }
+        syncStateMutex.withLock {
+            updateSystemDefaultAppId()
+            shizukuContextFlow.value.grantSelf()
+            updatePermissionState()
+            fixRestartAutomatorService()
+        }
+    }
+}
+
+@Composable
+private fun ShizukuErrorDialog(stateFlow: MutableStateFlow<Throwable?>) {
+    val state = stateFlow.collectAsState().value
+    if (state != null) {
+        val errorText = remember { state.stackTraceToString() }
+        val appInfoCache = appInfoMapFlow.collectAsState().value
+        val installed = appInfoCache.contains(shizukuAppId)
+        PerfAlertDialog(
+            onDismissRequest = { stateFlow.value = null },
+            title = { Text(text = "授权错误") },
+            text = {
+                Column {
+                    Text(
+                        text = if (installed) {
+                            "Shizuku 授权失败，请检查是否运行"
+                        } else {
+                            "Shizuku 授权失败，检测到 Shizuku 未安装，请先下载后安装，如果你是通过其它方式授权，请忽略此提示自行查找原因"
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SelectionContainer(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = errorText,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MiuixTheme.colorScheme.surfaceContainerHigh)
+                                    .padding(8.dp)
+                                    .heightIn(max = 400.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                style = MiuixTheme.textStyles.body2,
+                            )
+                        }
+                        PerfIcon(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .clickable(onClick = throttle {
+                                    copyText(errorText)
+                                })
+                                .padding(4.dp)
+                                .size(20.dp),
+                            imageVector = PerfIcon.ContentCopy,
+                            tint = MiuixTheme.colorScheme.onSurfaceVariantSummary.copy(alpha = 0.75f),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (installed) {
+                    TextButton(
+                        text = "打开 Shizuku",
+                        onClick = {
+                            stateFlow.value = null
+                            openApp(shizukuAppId)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                } else {
+                    TextButton(
+                        text = "去下载",
+                        onClick = {
+                            stateFlow.value = null
+                            openUri(ShortUrlSet.URL4)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.textButtonColorsPrimary(),
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    text = "我知道了",
+                    onClick = { stateFlow.value = null },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        )
+    }
+}
+
+
+val accessRestrictedSettingsShowFlow = MutableStateFlow(false)
+
+@Composable
+fun AccessRestrictedSettingsDlg() {
+    val a11yRunning by A11yService.isRunning.collectAsState()
+    LaunchedEffect(a11yRunning) {
+        if (a11yRunning) {
+            accessRestrictedSettingsShowFlow.value = false
+        }
+    }
+    val accessRestrictedSettingsShow by accessRestrictedSettingsShowFlow.collectAsState()
+    val mainVm = LocalMainViewModel.current
+    val isA11yPage = mainVm.topRoute is AuthA11yRoute
+    LaunchedEffect(isA11yPage, accessRestrictedSettingsShow) {
+        if (isA11yPage && accessRestrictedSettingsShow && !a11yRunning) {
+            toast("请重新授权以解除限制")
+            accessRestrictedSettingsShowFlow.value = false
+        }
+    }
+    if (accessRestrictedSettingsShow && !isA11yPage && !a11yRunning) {
+        PerfAlertDialog(
+            title = {
+                Text(text = "权限受限")
+            },
+            text = {
+                Text(text = "当前操作权限「访问受限设置」已被限制, 请先解除限制")
+            },
+            onDismissRequest = {
+                accessRestrictedSettingsShowFlow.value = false
+            },
+            confirmButton = {
+                TextButton(
+                    text = "解除",
+                    onClick = {
+                        accessRestrictedSettingsShowFlow.value = false
+                        mainVm.navigateWebPage(ShortUrlSet.URL2)
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary(),
+                )
+            },
+            dismissButton = {
+                TextButton(
+                    text = "关闭",
+                    onClick = {
+                        accessRestrictedSettingsShowFlow.value = false
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            },
+        )
+    }
+}
+
+@Composable
+fun UiAutomationAlreadyRegisteredDlg() {
+    if (automationRegisteredExceptionFlow.collectAsState().value != null) {
+        PerfAlertDialog(
+            onDismissRequest = {
+                automationRegisteredExceptionFlow.value = null
+            },
+            title = { Text(text = "启动失败") },
+            text = {
+                Text(text = "自动化服务启动失败，检测到自动化服务已被其他应用占用，请先关闭已有服务后重试\n\n注：自动化服务只能同时运行一个，请确保没有其他应用或测试框架占用后再启动")
+            },
+            confirmButton = {
+                TextButton(
+                    text = "我知道了",
+                    onClick = {
+                        automationRegisteredExceptionFlow.value = null
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        )
+    }
+}

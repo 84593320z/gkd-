@@ -1,0 +1,16 @@
+package li.songe.gkd.ui.home
+
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import li.songe.gkd.ui.component.PerfTopAppBar
+
+data class ScaffoldExt(
+    val navItem: BottomNavItem,
+    val modifier: Modifier = Modifier,
+    val topBar: @Composable () -> Unit = {
+        PerfTopAppBar(titleText = navItem.label)
+    },
+    val floatingActionButton: @Composable () -> Unit = {},
+    val content: @Composable (PaddingValues) -> Unit
+)

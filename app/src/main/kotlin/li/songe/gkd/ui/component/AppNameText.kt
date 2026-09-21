@@ -1,0 +1,124 @@
+package li.songe.gkd.ui.component
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import top.yukonga.miuix.kmp.basic.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isUnspecified
+import li.songe.gkd.data.AppInfo
+import li.songe.gkd.data.otherUserMapFlow
+import li.songe.gkd.shizuku.currentUserId
+import li.songe.gkd.util.appInfoMapFlow
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+@Composable
+fun AppNameText(
+    modifier: Modifier = Modifier,
+    appId: String? = null,
+    appInfo: AppInfo? = null,
+    fallbackName: String? = null,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified,
+) {
+    val info = appInfo ?: appInfoMapFlow.collectAsState().value[appId]
+    val showSystemIcon = info?.isSystem == true
+    val appName = (info?.name ?: fallbackName ?: appId ?: error("appId is required"))
+    val userName = info?.userId?.let { userId ->
+        if (userId == currentUserId) {
+            null
+        } else {
+            val userInfo = otherUserMapFlow.collectAsState().value[userId]
+            "「${userInfo?.name ?: userId}」"
+        }
+    }
+    val textDecoration = if (info?.enabled == false) TextDecoration.LineThrough else null
+    if (!showSystemIcon && userName == null) {
+        Text(
+            modifier = modifier,
+            text = appName,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            textDecoration = textDecoration,
+            style = style,
+            color = color,
+        )
+    } else {
+        val userNameColor = MiuixTheme.colorScheme.secondary
+        val annotatedString = remember(showSystemIcon, appName, userName, userNameColor) {
+            buildAnnotatedString {
+                if (showSystemIcon) {
+                    appendInlineContent("icon")
+                }
+                append(appName)
+                if (userName != null) {
+                    append(" ")
+                    withStyle(
+                        style = SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            color = userNameColor,
+                        )
+                    ) {
+                        append(userName)
+                    }
+                }
+            }
+        }
+        val inlineContent = if (showSystemIcon) {
+            val contentColor = style.color.takeOrElse { LocalContentColor.current }
+            val placeholderHeight = style.lineHeight.takeUnless { it.isUnspecified } ?: style.fontSize
+            remember(style, contentColor, placeholderHeight) {
+                mapOf(
+                    "icon" to InlineTextContent(
+                        placeholder = Placeholder(
+                            width = style.fontSize,
+                            height = placeholderHeight,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                        )
+                    ) {
+                        PerfIcon(
+                            imageVector = PerfIcon.VerifiedUser,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(2.dp))
+                                .fillMaxSize(),
+                            tint = contentColor
+                        )
+                    }
+                )
+            }
+        } else {
+            emptyMap()
+        }
+        Text(
+            modifier = modifier,
+            text = annotatedString,
+            inlineContent = inlineContent,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            textDecoration = textDecoration,
+            style = style,
+            color = color,
+        )
+    }
+}

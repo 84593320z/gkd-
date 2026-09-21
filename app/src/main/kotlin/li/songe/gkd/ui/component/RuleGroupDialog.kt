@@ -1,0 +1,230 @@
+package li.songe.gkd.ui.component
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import li.songe.gkd.ui.component.PerfAlertDialog
+import top.yukonga.miuix.kmp.basic.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import li.songe.gkd.data.RawSubscription
+import li.songe.gkd.ui.ImagePreviewItem
+import li.songe.gkd.ui.ImagePreviewRoute
+import li.songe.gkd.ui.SubsAppGroupListRoute
+import li.songe.gkd.ui.SubsGlobalGroupListRoute
+import li.songe.gkd.ui.icon.ResetSettings
+import li.songe.gkd.ui.share.LocalDarkTheme
+import li.songe.gkd.ui.share.LocalMainViewModel
+import li.songe.gkd.ui.style.getJson5AnnotatedString
+import li.songe.gkd.util.copyText
+import li.songe.gkd.util.throttle
+
+@Composable
+fun RuleGroupDialog(
+    subs: RawSubscription,
+    group: RawSubscription.RawGroupProps,
+    appId: String?,
+    onDismissRequest: () -> Unit,
+    onClickEdit: (() -> Unit) = {},
+    onClickEditExclude: () -> Unit,
+    onClickResetSwitch: (() -> Unit)?,
+    onClickDelete: () -> Unit = {}
+) {
+    val mainVm = LocalMainViewModel.current
+    PerfAlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(text = "规则详情") },
+        text = {
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val maxHeight = 300.dp
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = maxHeight)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MiuixTheme.colorScheme.secondaryContainer)
+                        .verticalScroll(rememberScrollState())
+                        .clearAndSetSemantics {
+                            contentDescription = "规则内容"
+                        }
+                ) {
+                    SelectionContainer {
+                        val textState = remember {
+                            mutableStateOf(
+                                group.cacheStr.run {
+                                    // 优化: 大字符串第一次显示卡顿
+                                    if (length > 1000) substring(0, 1000) else this
+                                }
+                            )
+                        }
+                        LaunchedEffect(group.cacheStr) {
+                            delay(50)
+                            if (group.cacheStr.length != textState.value.length) {
+                                textState.value = group.cacheStr
+                            }
+                        }
+                        val darkTheme = LocalDarkTheme.current
+                        Text(
+                            text = remember(textState.value, darkTheme) {
+                                getJson5AnnotatedString(
+                                    textState.value,
+                                    darkTheme
+                                )
+                            },
+                            modifier = Modifier.padding(4.dp),
+                            color = MiuixTheme.colorScheme.secondary,
+                            style = MiuixTheme.textStyles.footnote1,
+                        )
+                    }
+                }
+                PerfIcon(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .clickable(onClick = throttle {
+                            copyText(group.cacheStr)
+                        })
+                        .padding(4.dp)
+                        .size(24.dp),
+                    imageVector = PerfIcon.ContentCopy,
+                    tint = MiuixTheme.colorScheme.secondary.copy(alpha = 0.75f),
+                )
+                Text(
+                    text = group.cacheStr.length.toString(),
+                    modifier = Modifier
+                        .padding(end = 4.dp, bottom = 4.dp)
+                        .align(Alignment.BottomEnd)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MiuixTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 2.dp),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.secondary,
+                )
+            }
+        },
+        confirmButton = {
+            Row {
+                val currentRoute = mainVm.topRoute
+                val targetRoute = remember(subs.id, appId, group.key) {
+                    if (group is RawSubscription.RawGlobalGroup) {
+                        SubsGlobalGroupListRoute(
+                            subsItemId = subs.id,
+                            focusGroupKey = group.key
+                        )
+                    } else {
+                        SubsAppGroupListRoute(
+                            subsItemId = subs.id,
+                            appId = appId.toString(),
+                            focusGroupKey = group.key
+                        )
+                    }
+                }
+                if (targetRoute::class != currentRoute::class) {
+                    PerfIconButton(imageVector = PerfIcon.ArrowForward, onClick = throttle {
+                        onDismissRequest()
+                        mainVm.navigatePage(targetRoute)
+                    })
+                }
+                if (group.allExampleUrls.isNotEmpty()) {
+                    PerfIconButton(imageVector = PerfIcon.Image, onClick = throttle {
+                        onDismissRequest()
+                        mainVm.navigatePage(
+                            ImagePreviewRoute(
+                                title = group.name,
+                                items = buildRuleGroupPreviewItems(group),
+                            )
+                        )
+                    })
+                }
+                if (subs.isLocal) {
+                    PerfIconButton(imageVector = PerfIcon.Edit, onClick = throttle(onClickEdit))
+                }
+                PerfIconButton(
+                    imageVector = PerfIcon.Block,
+                    onClickLabel = "编辑规则排除名单",
+                    onClick = throttle(onClickEditExclude),
+                )
+                AnimatedVisibility(
+                    visible = onClickResetSwitch != null,
+                ) {
+                    PerfIconButton(
+                        imageVector = ResetSettings,
+                        onClickLabel = "重置开关状态至默认值",
+                        onClick = throttle(onClickResetSwitch ?: {}),
+                    )
+                }
+                if (subs.isLocal) {
+                    PerfIconButton(
+                        imageVector = PerfIcon.Delete,
+                        onClick = throttle(onClickDelete),
+                    )
+                }
+            }
+        },
+    )
+}
+
+// 规则组示例图需要保留“图片属于哪个子规则”的上下文，预览页才能显示更具体的标题。
+private fun buildRuleGroupPreviewItems(group: RawSubscription.RawGroupProps): List<ImagePreviewItem> {
+    val uriTitlesMap = linkedMapOf<String, LinkedHashSet<String>>()
+
+    fun addPreviewItem(uri: String, title: String?) {
+        val titles = uriTitlesMap.getOrPut(uri) { linkedSetOf() }
+        title?.takeIf { it.isNotBlank() }?.let(titles::add)
+    }
+
+    group.exampleUrls.orEmpty().forEach { uri ->
+        addPreviewItem(
+            uri = uri,
+            title = group.name,
+        )
+    }
+    group.rules.forEach { rule ->
+        val ruleTitle = buildRulePreviewTitle(rule)
+        rule.exampleUrls.orEmpty().forEach { uri ->
+            addPreviewItem(
+                uri = uri,
+                title = ruleTitle,
+            )
+        }
+    }
+
+    return uriTitlesMap.map { (uri, titles) ->
+        ImagePreviewItem(
+            uri = uri,
+            titles = titles.toList(),
+        )
+    }
+}
+
+private fun buildRulePreviewTitle(rule: RawSubscription.RawRuleProps): String? {
+    return when {
+        !rule.name.isNullOrBlank() -> rule.name
+        rule.key != null -> "key=${rule.key}"
+        !rule.preKeys.isNullOrEmpty() -> "preKeys=${(rule.preKeys as Iterable<Any?>).joinToString(",")}"
+        else -> null
+    }
+}

@@ -1,0 +1,57 @@
+# 更新内容
+
+## v1.2.5
+
+- 修复开机后需手动打开「服务状态」：系统杀掉无障碍时不再误清开启意图，自动修复会补写无障碍总开关
+- 修复无障碍进入 Crashed 后开关显示开启但跳广告失效、且关不掉：关闭时从安全设置移除，开启/修复时先摘再挂
+
+## v1.2.4
+
+- 修复悬浮底栏液态玻璃边缘折射/反射错位（padding 须在 blur 之前）
+- 更新检测优先 GitHub raw，多源比对最高 versionCode，避免 CDN 脏缓存挡住更新
+
+## v1.2.3
+
+- 按 MIUIX 规范收敛界面：二级页统一 AppPageScaffold 毛玻璃顶栏
+- 修复首页顶栏模糊不生效；底栏避免多 backdrop 抢采样变黑
+- 服务状态语义色、进度指示统一封装；卡片 12.dp 与可点色块 squircle
+
+## v1.2.2
+
+- 测试通知文案说明：应用内不会上岛，请在通知栏查看实时通知
+
+## v1.2.1
+
+- 实时通知同时适配 ColorOS 流体云与 HyperOS 超级岛
+- 超级岛参数改为官方摘要态模板（含 miui.focus.pics）
+
+## v1.2.0
+
+- 去掉设置分组外的分类小字标题（如「服务」「数据概览」「快捷入口」等），更贴合 MIUIX 观感
+
+## v1.1.0
+
+- 应用更名为 GKD-X，安装包名改为 `li.songe.gkdx`（可与原版 GKD 并存）
+- 触发记录、应用配置（含「最近触发」）改为独立 Activity，缓解进页转场掉帧
+
+## v1.0.0（首版）
+
+- 全量 MIUIX 界面（顶栏模糊、悬浮底栏、液态玻璃 FAB）
+- 预测式返回开关；动态取色默认关闭
+- 订阅添加/修改/刷新时显示加载进度
+- 触发提示支持流体云 / 灵动岛实时通知，并可自定义存在时间
+
+## MIUIX
+
+- 界面全面适配 MIUIX（顶栏、底栏、设置分组、对话框、图标等）
+- 触发记录页适配 MIUIX 样式与字体色
+- 订阅页取消下拉刷新，顶栏增加刷新按钮
+
+## 开源致谢
+
+本分支基于 [GKD](https://github.com/gkd-kit/gkd)，界面依托 [compose-miuix-ui](https://github.com/compose-miuix-ui/miuix)（MIUIX UI / Preference / Icons / Blur）等开源项目，详见仓库 README。
+
+## 更新方式
+
+- GKD-X - 设置 - 关于 - 检测更新
+- 或前往 [GitHub Releases](https://github.com/hanchuan8/gkd-miuix/releases) 下载

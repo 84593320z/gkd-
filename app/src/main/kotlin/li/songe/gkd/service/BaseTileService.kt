@@ -1,0 +1,49 @@
+package li.songe.gkd.service
+
+import android.service.quicksettings.Tile
+import android.service.quicksettings.TileService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+import li.songe.gkd.util.DefaultTileLifeImpl
+import li.songe.gkd.util.OnTileLife
+
+abstract class BaseTileService : TileService(), OnTileLife by DefaultTileLifeImpl() {
+    override fun onCreate() = onCreated()
+    override fun onStartListening() = onStartListened()
+    override fun onClick() = onTileClicked()
+    override fun onStopListening() = onStopListened()
+    override fun onDestroy() = onDestroyed()
+
+    abstract val activeFlow: StateFlow<Boolean>
+
+    val listeningFlow = MutableStateFlow(false).apply {
+        onStartListened { value = true }
+        onStopListened { value = false }
+    }
+
+    init {
+        onStartListened {
+            val t = System.currentTimeMillis()
+            if (t - lastA11yFixTime > 3_000L) {
+                lastA11yFixTime = t
+                fixRestartAutomatorService()
+            }
+        }
+        onTileClicked { StatusService.autoStart() }
+        scope.launch {
+            combine(
+                activeFlow,
+                listeningFlow
+            ) { v1, v2 -> v1 to v2 }.collect { (active, listening) ->
+                if (listening) {
+                    qsTile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+                    qsTile.updateTile()
+                }
+            }
+        }
+    }
+}
+
+private var lastA11yFixTime = 0L

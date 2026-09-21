@@ -1,0 +1,110 @@
+name: Build-Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+      - name: write gkd secrets info
+        run: |
+          echo ${{ secrets.GKD_STORE_FILE_BASE64 }} | base64 --decode > ${{ github.workspace }}/gkd.jks
+          echo GKD_STORE_FILE='${{ github.workspace }}/gkd.jks' >> gradle.properties
+          echo GKD_STORE_PASSWORD='${{ secrets.GKD_STORE_PASSWORD }}' >> gradle.properties
+          echo GKD_KEY_ALIAS='${{ secrets.GKD_KEY_ALIAS }}' >> gradle.properties
+          echo GKD_KEY_PASSWORD='${{ secrets.GKD_KEY_PASSWORD }}' >> gradle.properties
+
+      - name: write play secrets info
+        run: |
+          echo ${{ secrets.PLAY_STORE_FILE_BASE64 }} | base64 --decode > ${{ github.workspace }}/play.jks
+          echo PLAY_STORE_FILE='${{ github.workspace }}/play.jks' >> gradle.properties
+          echo PLAY_STORE_PASSWORD='${{ secrets.PLAY_STORE_PASSWORD }}' >> gradle.properties
+          echo PLAY_KEY_ALIAS='${{ secrets.PLAY_KEY_ALIAS }}' >> gradle.properties
+          echo PLAY_KEY_PASSWORD='${{ secrets.PLAY_KEY_PASSWORD }}' >> gradle.properties
+
+      - run: chmod 777 ./gradlew
+      - run: ./gradlew app:assembleGkdRelease app:bundlePlayRelease
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: app/build/outputs/apk/gkd/release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: playRelease
+          path: app/build/outputs/bundle/playRelease
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: outputs
+          path: app/build/outputs
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: CHANGELOG.md
+          path: CHANGELOG.md
+
+  release:
+    needs: build
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: outputs
+          path: outputs
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: CHANGELOG.md
+
+      - run: ls -R
+
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body_path: ./CHANGELOG.md
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/app-gkd-release.apk
+          asset_name: gkd-x-${{ github.ref_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - run: zip -r outputs.zip outputs
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: outputs.zip
+          asset_name: outputs-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
