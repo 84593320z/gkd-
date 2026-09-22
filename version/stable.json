@@ -1,10 +1,15 @@
 {
-  "versionCode": 99,
-  "versionName": "1.2.5",
-  "changelog": "v1.2.5\n\n- 修复开机后需手动打开「服务状态」：系统杀掉无障碍时不再误清开启意图，自动修复会补写无障碍总开关\n- 修复无障碍进入 Crashed 后开关显示开启但跳广告失效、且关不掉：关闭时从安全设置移除，开启/修复时先摘再挂",
-  "downloadUrl": "https://github.com/84593320z/gkd-/releases/download/v1.2.5/gkd-x-v1.2.5.apk",
+  "versionCode": 100,
+  "versionName": "1.2.6",
+  "changelog": "v1.2.6\n\n- AI 规则改为多服务商：新增「AI 服务商」列表页，可保存多套协议/地址/密钥/模型池，勾选圆点即切换当前服务商\n- 服务商详情拆「配置 / 模型」两页签；配置页含 Base URL、API Key（可显隐）、端点模式、anthropic-version、自定义请求头、系统提示词与生成参数\n- 模型页支持远端拉取合并、搜索、多选批量删除、逐个编辑上下文长度与思考标记\n- 「测试连接」直接读取远端 /models 并并入模型列表，结果行内反馈\n- 首次启动自动迁移旧的单份 AI 配置，无需重填",
+  "downloadUrl": "https://github.com/84593320z/gkd-/releases/download/v1.2.6/gkd-x-v1.2.6.apk",
   "fileSize": 3510436,
   "versionLogs": [
+    {
+      "name": "1.2.6",
+      "code": 100,
+      "desc": "- AI 规则改为多服务商：新增「AI 服务商」列表页与「配置 / 模型」双页签详情\n- 端点模式可选 Chat Completions / Responses；支持自定义请求头、远端拉取模型合并、多选批量删除\n- 首次启动自动迁移旧的单份 AI 配置"
+    },
     {
       "name": "1.2.5",
       "code": 99,
