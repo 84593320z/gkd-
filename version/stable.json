@@ -3,7 +3,7 @@
   "versionName": "1.2.6",
   "changelog": "v1.2.6\n\n- AI 规则改为多服务商：新增「AI 服务商」列表页，可保存多套协议/地址/密钥/模型池，勾选圆点即切换当前服务商\n- 服务商详情拆「配置 / 模型」两页签；配置页含 Base URL、API Key（可显隐）、端点模式、anthropic-version、自定义请求头、系统提示词与生成参数\n- 模型页支持远端拉取合并、搜索、多选批量删除、逐个编辑上下文长度与思考标记\n- 「测试连接」直接读取远端 /models 并并入模型列表，结果行内反馈\n- 首次启动自动迁移旧的单份 AI 配置，无需重填",
   "downloadUrl": "https://github.com/84593320z/gkd-/releases/download/v1.2.6/gkd-x-v1.2.6.apk",
-  "fileSize": 3510436,
+  "fileSize": 3559592,
   "versionLogs": [
     {
       "name": "1.2.6",
