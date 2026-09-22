@@ -200,7 +200,7 @@ class UpdateStatus(val scope: CoroutineScope) {
                 onDismissRequest = { },
                 confirmButton = {
                     TextButton(
-                        text = "下载更新",
+                        text = "更新",
                         onClick = {
                             newVersionFlow.value = null
                             startDownload(newVersionVal)
