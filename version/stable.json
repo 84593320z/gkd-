@@ -1,14 +1,14 @@
 {
   "versionCode": 101,
   "versionName": "1.2.7",
-  "changelog": "v1.2.7\n\n- 更新弹窗的确认按钮改为「更新」，四个字不再折成两行",
+  "changelog": "v1.2.7\n\n- 更新弹窗的确认按钮改为「更新」，四个字不再折成两行\n- 下载失败时弹窗新增「复制链接 / 浏览器打开」，GitHub 直连不通可交给带代理的浏览器下载",
   "downloadUrl": "https://github.com/84593320z/gkd-/releases/download/v1.2.7/gkd-x-v1.2.7.apk",
   "fileSize": 3559592,
   "versionLogs": [
     {
       "name": "1.2.7",
       "code": 101,
-      "desc": "- 更新弹窗的确认按钮改为「更新」，四个字不再折成两行"
+      "desc": "- 更新弹窗的确认按钮改为「更新」，四个字不再折成两行\n- 下载失败时弹窗新增「复制链接 / 浏览器打开」，GitHub 直连不通可交给带代理的浏览器下载"
     },
     {
       "name": "1.2.6",

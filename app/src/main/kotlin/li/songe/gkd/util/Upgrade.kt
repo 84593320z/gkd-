@@ -2,8 +2,10 @@ package li.songe.gkd.util
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import li.songe.gkd.ui.component.PerfAlertDialog
@@ -11,6 +13,7 @@ import li.songe.gkd.ui.component.AppLinearProgressIndicator
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -82,6 +85,9 @@ class UpdateStatus(val scope: CoroutineScope) {
     private val downloadStatusFlow = MutableStateFlow<LoadStatus<File>?>(null)
     private var downloadJob: Job? = null
 
+    /** 失败弹窗要能兜底：GitHub 直连不通时把直链交给用户（复制/浏览器可能走代理） */
+    private var downloadUrlVal = ""
+
     private val ignoreVersionListFlow by lazy {
         createAnyFlow(
             key = "ignore_version_list",
@@ -130,6 +136,8 @@ class UpdateStatus(val scope: CoroutineScope) {
     private fun startDownload(newVersion: NewVersion) {
         if (downloadStatusFlow.value is LoadStatus.Loading) return
         downloadStatusFlow.value = LoadStatus.Loading(0f)
+        val apkUrl = URI(UPDATE_URL).resolve(newVersion.downloadUrl).toString()
+        downloadUrlVal = apkUrl
         val apkFile = sharedDir.resolve("gkd-v${newVersion.versionCode}.apk").apply {
             if (exists()) {
                 delete()
@@ -137,8 +145,7 @@ class UpdateStatus(val scope: CoroutineScope) {
         }
         downloadJob = scope.launch(Dispatchers.IO) {
             try {
-                val channel =
-                    client.get(URI(UPDATE_URL).resolve(newVersion.downloadUrl).toString()) {
+                val channel = client.get(apkUrl) {
                         onDownload { bytesSentTotal, contentLength ->
                             val downloadStatus = downloadStatusFlow.value
                             if (downloadStatus is LoadStatus.Loading) {
@@ -276,18 +283,36 @@ class UpdateStatus(val scope: CoroutineScope) {
                 PerfAlertDialog(
                     title = { Text(text = "下载失败") },
                     text = {
-                        Text(text = downloadStatusVal.exception.let {
-                            it.message ?: it.toString()
-                        })
+                        Column {
+                            Text(
+                                text = downloadStatusVal.exception.let {
+                                    it.message ?: it.toString()
+                                }
+                            )
+                            if (downloadUrlVal.isNotBlank()) {
+                                Text(
+                                    text = "GitHub 直连不通时可复制下面链接，用带代理的浏览器下载。",
+                                    style = MiuixTheme.textStyles.body2,
+                                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                    modifier = Modifier.padding(top = 8.dp),
+                                )
+                            }
+                        }
                     },
                     onDismissRequest = { downloadStatusFlow.value = null },
+                    dismissButton = {
+                        TextButton(
+                            text = "复制链接",
+                            onClick = { copyText(downloadUrlVal) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    },
                     confirmButton = {
                         TextButton(
-                            text = "关闭",
-                            onClick = {
-                                downloadStatusFlow.value = null
-                            },
+                            text = "浏览器打开",
+                            onClick = { openUri(downloadUrlVal) },
                             modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.textButtonColorsPrimary(),
                         )
                     },
                 )
