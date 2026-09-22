@@ -95,7 +95,6 @@ fun AdvancedPage() {
     val context = LocalActivity.current as MainActivity
     val mainVm = LocalMainViewModel.current
     val vm = viewModel<AdvancedVm>()
-    val aiVm = viewModel<AiConfigVm>()
     val store by storeFlow.collectAsState()
 
     var showEditPortDlg by vm.showEditPortDlgFlow.asMutableState()
@@ -449,26 +448,24 @@ fun AdvancedPage() {
             PreferenceGroup(title = "快照") {
                 TextSwitch(
                     title = "AI 规则",
-                    subtitle = "保存快照后自动生成规则",
+                    subtitle = "保存快照后按当前服务商自动生成规则",
                     checked = store.aiEnable,
                     suffixIcon = {
                         PerfCustomIconButton(
                             size = 32.dp,
                             iconSize = 20.dp,
-                            onClickLabel = "打开 AI 规则配置页",
+                            onClickLabel = "打开 AI 服务商列表",
                             onClick = throttle {
-                                aiVm.finishEditing()
-                                mainVm.navigatePage(AiConfigPageRoute)
+                                mainVm.navigatePage(AiProvidersPageRoute)
                             },
                             imageVector = PerfIcon.Settings,
-                            contentDescription = "AI 规则设置",
+                            contentDescription = "AI 服务商",
                         )
                     },
                     onCheckedChange = {
-                        if (it && (store.aiConfig.apiUrl.isBlank() || store.aiConfig.apiKey.isBlank())) {
-                            toast("请先配置 AI 设置")
-                            aiVm.finishEditing()
-                            mainVm.navigatePage(AiConfigPageRoute)
+                        if (it && store.activeAiProvider()?.usable != true) {
+                            toast("请先配置并启用一个 AI 服务商")
+                            mainVm.navigatePage(AiProvidersPageRoute)
                             return@TextSwitch
                         }
                         storeFlow.value = store.copy(aiEnable = it)

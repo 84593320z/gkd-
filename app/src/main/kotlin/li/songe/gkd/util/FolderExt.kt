@@ -141,7 +141,10 @@ fun buildLogFile(): File {
             it.writeText(
                 json.encodeToString(
                     storeFlow.value.copy(
-                        aiConfig = storeFlow.value.aiConfig.copy(apiKey = MASKED_SECRET)
+                        aiConfig = storeFlow.value.aiConfig?.copy(apiKey = MASKED_SECRET),
+                        aiProviders = storeFlow.value.aiProviders.map { provider ->
+                            provider.copy(apiKey = MASKED_SECRET)
+                        },
                     )
                 )
             )

@@ -19,6 +19,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
+import io.ktor.client.request.HttpRequestBuilder
 import li.songe.gkd.a11y.A11yContext
 import li.songe.gkd.a11y.A11yRuleEngine
 import li.songe.gkd.app
@@ -28,6 +35,8 @@ import li.songe.gkd.data.GkdAction
 import li.songe.gkd.data.RawSubscription
 import li.songe.gkd.data.info2nodeList
 import li.songe.gkd.store.AiConfig
+import li.songe.gkd.store.AiEndpointMode
+import li.songe.gkd.store.AiModel
 import li.songe.gkd.store.storeFlow
 import li.songe.selector.MatchOption
 import li.songe.selector.Selector
@@ -61,6 +70,23 @@ data class AnthropicRequest(
     val temperature: Float = 0f,
     val top_p: Float = 1f,
     val max_tokens: Int = 4096,
+    val system: String? = null,
+)
+
+/** Responses 端点不接受 top_p，只带 temperature 与 max_output_tokens。 */
+@Serializable
+data class ResponsesInputMessage(
+    val role: String = "user",
+    val content: String,
+)
+
+@Serializable
+data class ResponsesRequest(
+    val model: String,
+    val input: List<ResponsesInputMessage>,
+    val instructions: String? = null,
+    val temperature: Float = 0f,
+    val max_output_tokens: Int = 4096,
 )
 
 object AiRuleGenerator {
@@ -106,9 +132,28 @@ object AiRuleGenerator {
 
     private fun buildApiEndpoint(config: AiConfig): String {
         val baseUrl = fixApiUrl(config.apiUrl, config.protocol)
-        return when (config.protocol) {
-            "anthropic" -> "$baseUrl/messages"
+        return when {
+            config.isAnthropic -> "$baseUrl/messages"
+            config.endpointMode == AiEndpointMode.RESPONSES -> "$baseUrl/responses"
             else -> "$baseUrl/chat/completions"
+        }
+    }
+
+    /** 自定义头先写入，认证头随后覆盖，避免用户误填 Authorization 把 Key 顶掉。 */
+    private fun HttpRequestBuilder.applyAiHeaders(config: AiConfig) {
+        config.headers.forEach { entry ->
+            val name = entry.name.trim()
+            if (name.isNotEmpty()) header(name, entry.value.trim())
+        }
+        when {
+            config.isAnthropic -> {
+                header("x-api-key", config.apiKey)
+                header(
+                    "anthropic-version",
+                    config.anthropicVersion.ifBlank { AiConfig.DEFAULT_ANTHROPIC_VERSION },
+                )
+            }
+            else -> header("Authorization", "Bearer ${config.apiKey}")
         }
     }
 
@@ -126,20 +171,34 @@ object AiRuleGenerator {
 
     private fun buildRequestBody(config: AiConfig, content: String, maxTokensOverride: Int? = null): String {
         val maxTokens = maxTokensOverride ?: config.maxTokens
-        return when (config.protocol) {
-            "anthropic" -> json.encodeToString(
+        val systemPrompt = config.systemPrompt.trim().takeIf { it.isNotEmpty() }
+        return when {
+            config.isAnthropic -> json.encodeToString(
                 AnthropicRequest(
                     model = config.model,
                     messages = listOf(AnthropicMessage("user", content)),
                     temperature = config.temperature,
                     top_p = config.topP,
                     max_tokens = maxTokens,
+                    system = systemPrompt,
+                )
+            )
+            config.endpointMode == AiEndpointMode.RESPONSES -> json.encodeToString(
+                ResponsesRequest(
+                    model = config.model,
+                    input = listOf(ResponsesInputMessage(content = content)),
+                    instructions = systemPrompt,
+                    temperature = config.temperature,
+                    max_output_tokens = maxTokens,
                 )
             )
             else -> json.encodeToString(
                 ChatRequest(
                     model = config.model,
-                    messages = listOf(ChatMessage("user", content)),
+                    messages = listOfNotNull(
+                        systemPrompt?.let { ChatMessage("system", it) },
+                        ChatMessage("user", content),
+                    ),
                     temperature = config.temperature,
                     top_p = config.topP,
                     max_tokens = maxTokens,
@@ -152,15 +211,8 @@ object AiRuleGenerator {
     suspend fun testConnection(config: AiConfig): Result<String> = runCatching {
         val httpClient = createHttpClient()
         try {
-            val endpoint = buildApiEndpoint(config)
-            val response = httpClient.post(endpoint) {
-                when (config.protocol) {
-                    "anthropic" -> {
-                        header("x-api-key", config.apiKey)
-                        header("anthropic-version", "2023-06-01")
-                    }
-                    else -> header("Authorization", "Bearer ${config.apiKey}")
-                }
+            val response = httpClient.post(buildApiEndpoint(config)) {
+                applyAiHeaders(config)
                 contentType(ContentType.Application.Json)
                 setBody(buildRequestBody(config, "hi", maxTokensOverride = 1))
             }
@@ -184,30 +236,41 @@ object AiRuleGenerator {
         return message.trim().take(200)
     }
 
-    suspend fun fetchModelList(config: AiConfig): Result<List<String>> = runCatching {
+    /** 拉取远端模型：各家字段名不统一，能解析出上下文长度与推理能力就一并记录。 */
+    suspend fun fetchModels(config: AiConfig): Result<List<AiModel>> = runCatching {
         val baseUrl = fixApiUrl(config.apiUrl, config.protocol)
-        val modelsEndpoint = "$baseUrl/models"
         val httpClient = createHttpClient()
         try {
-            val response = httpClient.get(modelsEndpoint) {
-                when (config.protocol) {
-                    "anthropic" -> {
-                        header("x-api-key", config.apiKey)
-                        header("anthropic-version", "2023-06-01")
-                    }
-                    else -> header("Authorization", "Bearer ${config.apiKey}")
-                }
+            val response = httpClient.get("$baseUrl/models") {
+                applyAiHeaders(config)
             }
             val body = response.bodyAsText()
-            val jsonElement = json.parseToJsonElement(body)
-            val data = jsonElement.jsonObject["data"]
-                ?: throw Exception("No data field in response")
+            if (!response.status.isSuccess()) {
+                throw Exception("HTTP ${response.status.value} ${errorHint(body)}".trim())
+            }
+            val data = json.parseToJsonElement(body).jsonObject["data"]
+                ?: throw Exception("接口未返回 data 字段")
             data.jsonArray.mapNotNull { element ->
-                try {
-                    element.jsonObject["id"]?.jsonPrimitive?.content
-                } catch (_: Exception) {
-                    null
-                }
+                runCatching {
+                    val item = element.jsonObject
+                    val id = item["id"]?.jsonPrimitive?.content ?: return@runCatching null
+                    val label = (item["display_name"] ?: item["name"])?.jsonPrimitive?.content
+                    val capabilities = item["capabilities"].objectOrNull()
+                    val reasoning = item["supports_reasoning"].boolOrNullValue()
+                        ?: item["supported_parameters"].jsonArrayOrNull
+                            ?.any { it.jsonPrimitive.content == "reasoning_effort" }
+                        ?: capabilities?.get("supports_reasoning").boolOrNullValue()
+                    AiModel(
+                        modelId = id,
+                        displayName = label?.ifBlank { null } ?: id,
+                        contextWindow = item.intOf("context_length")
+                            ?: item["context_window"].intOrNullValue()
+                            ?: item["context_window"].objectOrNull()?.intOf("max_input_tokens")
+                            ?: capabilities?.intOf("max_input_tokens")
+                            ?: 0,
+                        reasoning = reasoning,
+                    )
+                }.getOrNull()
             }
         } finally {
             httpClient.close()
@@ -215,9 +278,9 @@ object AiRuleGenerator {
     }
 
     suspend fun generateRule(snapshotId: Long) {
-        val config = storeFlow.value.aiConfig
-        if (config.apiUrl.isBlank() || config.apiKey.isBlank() || config.model.isBlank()) {
-            toast("请先配置 AI 规则设置")
+        val config = storeFlow.value.activeAiProvider()
+        if (config == null || !config.usable) {
+            toast("请先在 AI 设置中选择并配置服务商")
             return
         }
         pendingCount.value++
@@ -228,9 +291,9 @@ object AiRuleGenerator {
     }
 
     private suspend fun processRule(snapshotId: Long) {
-        val config = storeFlow.value.aiConfig
         isGenerating.value = true
         try {
+            val config = storeFlow.value.activeAiProvider() ?: error("请先配置 AI 服务商")
             toast("AI 正在生成规则...", forced = true)
             val prompt = loadPrompt()
             val snapshotJson = withContext(Dispatchers.IO) {
@@ -276,13 +339,13 @@ object AiRuleGenerator {
      * 4. 未生效则将失败规则加入 prompt，让 AI 重新生成
      */
     suspend fun enhancedGenerate() {
-        val config = storeFlow.value.aiConfig
+        val config = storeFlow.value.activeAiProvider()
         if (!storeFlow.value.aiEnable) {
             toast("请先启用 AI 规则")
             return
         }
-        if (config.apiUrl.isBlank() || config.apiKey.isBlank() || config.model.isBlank()) {
-            toast("请先配置 AI 规则设置")
+        if (config == null || !config.usable) {
+            toast("请先在 AI 设置中选择并配置服务商")
             return
         }
         if (isGenerating.value) {
@@ -478,26 +541,38 @@ $previousRule
         val httpClient = createHttpClient()
         try {
             val response = httpClient.post(endpoint) {
-                when (config.protocol) {
-                    "anthropic" -> {
-                        header("x-api-key", config.apiKey)
-                        header("anthropic-version", "2023-06-01")
-                    }
-                    else -> header("Authorization", "Bearer ${config.apiKey}")
-                }
+                applyAiHeaders(config)
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }
             val body = response.bodyAsText()
             LogUtils.d("AI Response (first 3000 chars): ${body.take(3000)}")
+            if (!response.status.isSuccess()) {
+                throw Exception("HTTP ${response.status.value} ${errorHint(body)}".trim())
+            }
             val jsonElement = json.parseToJsonElement(body)
 
-            return when (config.protocol) {
-                "anthropic" -> {
+            return when {
+                config.isAnthropic -> {
                     val contentArr = jsonElement.jsonObject["content"]
-                        ?: throw Exception("No content in Anthropic response")
+                        ?: throw Exception(errorHint(body).ifBlank { "Anthropic 响应缺少 content" })
                     contentArr.jsonArray.firstOrNull()?.jsonObject?.get("text")?.jsonPrimitive?.content
                         ?: throw Exception("No text in Anthropic content")
+                }
+                config.endpointMode == AiEndpointMode.RESPONSES -> {
+                    // Responses 的正文在 output[] 的 message 项里，逐段拼 output_text
+                    val text = jsonElement.jsonObject["output"].jsonArrayOrNull
+                        ?.flatMap { item ->
+                            val msg = item.objectOrNull() ?: return@flatMap emptyList()
+                            msg["content"].jsonArrayOrNull.orEmpty().mapNotNull { part ->
+                                val obj = part.objectOrNull() ?: return@mapNotNull null
+                                obj["output_text"]?.jsonPrimitive?.content
+                                    ?: obj["text"]?.jsonPrimitive?.content
+                                        .takeIf { obj["type"]?.jsonPrimitive?.content == "text" }
+                            }
+                        }?.joinToString("\n").orEmpty()
+                    text.ifBlank { errorHint(body) }.takeIf { it.isNotBlank() }
+                        ?: throw Exception("Responses 响应中没有文本内容")
                 }
                 else -> {
                     val choices = jsonElement.jsonObject["choices"]
@@ -597,3 +672,13 @@ $previousRule
         updateSubscription(updatedSubs)
     }
 }
+
+private val JsonElement?.jsonArrayOrNull: JsonArray? get() = this as? JsonArray
+
+private fun JsonElement?.objectOrNull(): JsonObject? = this as? JsonObject
+
+private fun JsonElement?.intOrNullValue(): Int? = (this as? JsonPrimitive)?.intOrNull
+
+private fun JsonElement?.boolOrNullValue(): Boolean? = (this as? JsonPrimitive)?.booleanOrNull
+
+private fun JsonObject.intOf(key: String): Int? = this[key].intOrNullValue()

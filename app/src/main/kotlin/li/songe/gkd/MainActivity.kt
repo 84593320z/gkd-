@@ -82,12 +82,12 @@ import li.songe.gkd.ui.ActivityLogPage
 import li.songe.gkd.ui.ActivityLogRoute
 import li.songe.gkd.ui.AdvancedPage
 import li.songe.gkd.ui.AdvancedPageRoute
-import li.songe.gkd.ui.AiConfigPage
-import li.songe.gkd.ui.AiConfigPageRoute
 import li.songe.gkd.ui.AiHelpPage
 import li.songe.gkd.ui.AiHelpPageRoute
-import li.songe.gkd.ui.AiParamsPage
-import li.songe.gkd.ui.AiParamsPageRoute
+import li.songe.gkd.ui.AiProviderDetailPage
+import li.songe.gkd.ui.AiProviderDetailRoute
+import li.songe.gkd.ui.AiProvidersPage
+import li.songe.gkd.ui.AiProvidersPageRoute
 import li.songe.gkd.ui.AppOpsAllowPage
 import li.songe.gkd.ui.AppOpsAllowRoute
 import li.songe.gkd.ui.AuthA11yPage
@@ -280,8 +280,8 @@ class MainActivity : ComponentActivity() {
                             entry<DesignRoute> { DesignPage() }
                             entry<BlockA11yAppListRoute> { BlockA11yAppListPage() }
                             entry<AdvancedPageRoute> { AdvancedPage() }
-                            entry<AiConfigPageRoute> { AiConfigPage() }
-                            entry<AiParamsPageRoute> { AiParamsPage() }
+                            entry<AiProvidersPageRoute> { AiProvidersPage() }
+                            entry<AiProviderDetailRoute> { key -> AiProviderDetailPage(key) }
                             entry<AiHelpPageRoute> { AiHelpPage() }
                             entry<SnapshotPageRoute> { SnapshotPage() }
                             entry<AppOpsAllowRoute> { AppOpsAllowPage() }

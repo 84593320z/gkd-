@@ -203,11 +203,20 @@ sealed class AiProtocolOption(
     override val value: String,
     override val label: String,
     val placeholder: String,
+    val newTitle: String,
+    val newSummary: String,
 ) : Option<String> {
     override val options get() = objects
 
-    data object OpenAI : AiProtocolOption("openai", "OpenAI 兼容", "https://api.openai.com")
-    data object Anthropic : AiProtocolOption("anthropic", "Anthropic", "https://api.anthropic.com")
+    data object OpenAI : AiProtocolOption(
+        "openai", "OpenAI 兼容", "https://api.openai.com",
+        "OpenAI 兼容", "/chat/completions · /responses · 中转与自建网关",
+    )
+
+    data object Anthropic : AiProtocolOption(
+        "anthropic", "Anthropic", "https://api.anthropic.com",
+        "Anthropic", "Claude Messages 接口",
+    )
 
     companion object {
         val objects by lazy { listOf(OpenAI, Anthropic) }
